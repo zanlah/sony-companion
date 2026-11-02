@@ -4,6 +4,7 @@ import SonyProtocol
 
 /// IOBluetooth callbacks and timers run on the main run loop.
 final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMChannelDelegate {
+    let microphone = MicrophoneGuard(demo: ProcessInfo.processInfo.arguments.contains("--demo"))
     @Published private(set) var state = HeadphoneState()
     @Published private(set) var status = "Looking for your XM5s"
     @Published private(set) var connected = false
@@ -33,6 +34,7 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
     private var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
     func start() {
+        microphone.start()
         if ProcessInfo.processInfo.arguments.contains("--demo") {
             demo = true; connected = true; status = "Demo · sample data"
             for reply: [UInt8] in [[1, 0, 3, 0, 0x20, 0x16, 0, 0], [0x23, 0, 82, 0],
@@ -49,6 +51,7 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
     }
 
     func stop() {
+        microphone.stop()
         stopped = true; timer?.invalidate(); timer = nil
         tearDown()
     }

@@ -31,6 +31,8 @@ struct CompanionView: View {
                 }.frame(maxWidth: .infinity).padding(.vertical, 16)
             }
             Divider()
+            MicrophoneSection(guardModel: controller.microphone)
+            Divider()
             footer
         }
         .padding(20).frame(width: 360)
@@ -184,5 +186,35 @@ private struct ConfirmedSlider: View {
             else { editing = false; commit(draft) }
         }
         .accessibilityValue("\(Int(editing ? draft : value))")
+    }
+}
+
+private struct MicrophoneSection: View {
+    @ObservedObject var guardModel: MicrophoneGuard
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("CALL AUDIO").font(.system(size: 10, weight: .semibold, design: .rounded))
+                .tracking(1.8).foregroundStyle(.secondary)
+            Toggle("Use Mac microphone", isOn: Binding(get: { guardModel.enabled }, set: guardModel.setEnabled))
+                .toggleStyle(.switch).controlSize(.small)
+            Text("Input: \(guardModel.inputName)").font(.caption).foregroundStyle(.secondary)
+            if !guardModel.outputDescription.isEmpty {
+                Text("Headphones: \(guardModel.outputDescription)").font(.caption).foregroundStyle(.secondary)
+            }
+            if !guardModel.message.isEmpty {
+                Text(guardModel.message).font(.caption).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("In calling apps, also choose the Mac microphone or System Default.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Button(guardModel.resettingOutput ? "Re-selecting output…" : "Re-select headphone output") { guardModel.resetOutput() }
+                .disabled(!guardModel.canResetOutput || guardModel.resettingOutput)
+                .help("Briefly switches output to Mac speakers and back. Playback may be audible from the speakers.")
+            Text("Output reset briefly plays through the Mac speakers.")
+                .font(.caption).foregroundStyle(.secondary)
+            Button("Sound input settings") {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension?input") { NSWorkspace.shared.open(url) }
+            }.buttonStyle(.link).font(.caption)
+        }
     }
 }

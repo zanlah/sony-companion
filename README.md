@@ -30,6 +30,7 @@ Quit the running app before switching between real and demo mode. Demo is clearl
 - Ambient level and focus on voice
 - EQ presets and five bands plus Clear Bass
 - DSEE Extreme and Speak-to-Chat
+- Keep the system input on the Mac microphone while XM5 is the output, with live input/output format and a manual output reset
 - Automatic reconnect and a manual reconnect button
 
 Controls stay disabled until their settings have been reported by the headphones. Changes are read back rather than assumed successful. Sliders send on release. Only the Sony control channel is closed on reconnect or quit; the app does not intentionally disconnect Bluetooth audio.
@@ -45,6 +46,14 @@ If controls cannot connect, check System Settings → Privacy & Security → Blu
 Enable the option to connect two devices simultaneously in Sony's mobile app, then connect both the phone and Mac to the headphones. The **Audio Source** section lists the devices the headphones report as connected. Choose a device in the **Play from** selector. Its selection updates only after the headphones confirm the source. Noise controls and all sound settings remain visible below the compact source selector.
 
 The list refreshes every five seconds and can also be refreshed manually. While switching, the app checks for confirmation for up to six seconds. The command changes the headphones' selected source; it does not remotely press Play in a phone app. If needed, start playback on the selected device. During a call, the headphones may refuse a switch. The app then keeps the reported source and displays a message. Hardware verification of multipoint switching is still needed.
+
+## Microphone and call audio quality
+
+**Call Audio → Use Mac microphone** is on by default and remembered between launches. When the system output is WH-1000XM5 over Bluetooth, it keeps the built-in Mac microphone selected as the default input. Turning it off stops enforcement and leaves the currently selected input in place. It does not record audio or request microphone capture access.
+
+Apps such as Zoom or Discord can select an input independently: choose the Mac microphone or System Default inside the calling app too. A phone call over multipoint can also keep the headphones in call mode. This app cannot block another process from directly opening the Sony microphone or force high-quality Bluetooth playback while that microphone is in use. See [Apple's explanation](https://support.apple.com/en-mide/102217).
+
+The panel displays the actual system input and the output's nominal sample rate/channel count, and flags an output at 24 kHz or lower. This describes the CoreAudio format, not a definitive Bluetooth profile/codec measurement. If sound remains degraded after choosing the Mac mic, **Re-select headphone output** follows Apple's workaround: it briefly selects the Mac speakers and returns to the headphones. Playback can be audible through the speakers during that reset; it runs only when clicked. No automatic output switching occurs. If you select another output during the reset, your selection is respected.
 
 ## Development
 
