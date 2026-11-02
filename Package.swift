@@ -9,6 +9,7 @@ let package = Package(
         .target(name: "SonyProtocol"),
         .executableTarget(name: "SonyCompanion", dependencies: ["SonyProtocol"],
                           linkerSettings: [.linkedFramework("IOBluetooth")]),
-        .testTarget(name: "SonyProtocolTests", dependencies: ["SonyProtocol"])
+        .testTarget(name: "SonyProtocolTests", dependencies: ["SonyProtocol"]),
+        .testTarget(name: "SonyCompanionTests", dependencies: ["SonyCompanion"])
     ]
 )

@@ -1,6 +1,6 @@
 # Sony Companion
 
-A native macOS menu bar app for Sony WH-1000XM5 headphones, written in Swift and SwiftUI. macOS 14+, Apple Silicon or Intel. No third-party package dependencies.
+A native macOS menu bar app for Sony WH-1000XM5 headphones, written in Swift and SwiftUI. The panel uses an AppKit popover anchored to the menu bar icon and scrolls when expanded settings exceed the available screen height. macOS 14+, Apple Silicon or Intel. No third-party package dependencies.
 
 ## Run
 
