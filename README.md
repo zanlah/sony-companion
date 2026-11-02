@@ -42,7 +42,7 @@ If controls cannot connect, check System Settings → Privacy & Security → Blu
 
 ## Switching between phone and Mac
 
-Enable the option to connect two devices simultaneously in Sony's mobile app, then connect both the phone and Mac to the headphones. The **Audio Source** section lists the devices the headphones report as connected. Click **Play here** next to the source you want to hear. **Active** appears only after the headphones confirm the source.
+Enable the option to connect two devices simultaneously in Sony's mobile app, then connect both the phone and Mac to the headphones. The **Audio Source** section lists the devices the headphones report as connected. Choose a device in the **Play from** selector. Its selection updates only after the headphones confirm the source. Noise controls and all sound settings remain visible below the compact source selector.
 
 The list refreshes every five seconds and can also be refreshed manually. While switching, the app checks for confirmation for up to six seconds. The command changes the headphones' selected source; it does not remotely press Play in a phone app. If needed, start playback on the selected device. During a call, the headphones may refuse a switch. The app then keeps the reported source and displays a message. Hardware verification of multipoint switching is still needed.
 

@@ -14,15 +14,11 @@ struct CompanionView: View {
                     .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
             }
             if controller.state.ready {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        sourceControls
-                        Divider()
-                        noiseControls
-                        Divider()
-                        soundControls
-                    }
-                }.frame(maxHeight: 540)
+                sourceControls
+                Divider()
+                noiseControls
+                Divider()
+                soundControls
             } else {
                 VStack(spacing: 12) {
                     Image(systemName: "headphones").font(.system(size: 44, weight: .ultraLight)).foregroundStyle(accent)
@@ -38,6 +34,7 @@ struct CompanionView: View {
             footer
         }
         .padding(20).frame(width: 360)
+        .fixedSize(horizontal: false, vertical: true)
         .tint(accent)
     }
 
@@ -73,27 +70,21 @@ struct CompanionView: View {
                     .buttonStyle(.plain).help("Refresh connected devices")
                     .disabled(controller.playbackDevices == nil || controller.demo || controller.switchingTo != nil)
             }
-            if let devices = controller.playbackDevices {
-                ForEach(devices) { device in
-                    Button { controller.playFrom(device) } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: device.playing ? "speaker.wave.2.fill" : "hifi")
-                                .foregroundStyle(device.playing ? accent : .secondary)
-                            Text(device.name).font(.callout).lineLimit(1).truncationMode(.middle)
-                            Spacer()
-                            if controller.switchingTo == device.id {
-                                ProgressView().controlSize(.small)
-                            } else if device.playing {
-                                Text("Active").font(.caption).foregroundStyle(accent)
-                                Image(systemName: "checkmark").font(.caption)
-                            } else {
-                                Text("Play here").font(.caption).foregroundStyle(.secondary)
-                            }
+            if let devices = controller.playbackDevices, !devices.isEmpty {
+                HStack(spacing: 8) {
+                    Picker("Play from", selection: Binding(
+                        get: { devices.first(where: \.playing)?.id ?? "" },
+                        set: { id in
+                            if let device = devices.first(where: { $0.id == id }) { controller.playFrom(device) }
                         }
-                        .padding(10).background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+                    )) {
+                        if !devices.contains(where: \.playing) { Text("Choose device").tag("") }
+                        ForEach(devices) { device in
+                            Text(device.name).tag(device.id)
+                        }
                     }
-                    .buttonStyle(.plain).disabled(device.playing || controller.switchingTo != nil)
-                    .accessibilityLabel("\(device.name), \(device.playing ? "active audio source" : "switch audio source")")
+                    .disabled(devices.count < 2 || controller.switchingTo != nil)
+                    if controller.switchingTo != nil { ProgressView().controlSize(.small) }
                 }
             }
             Text(controller.sourceStatus).font(.caption).foregroundStyle(.secondary)
