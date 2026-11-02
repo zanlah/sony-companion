@@ -67,3 +67,7 @@ The session retries an unanswered command twice, then reconnects to establish a 
 ## Attribution
 
 Independent project, not affiliated with Sony. The protocol implementation was informed by and partially adapted from [aecca/sound-connect](https://github.com/aecca/sound-connect), including its WH-1000XM5 wire fixtures. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## License
+
+[MIT](LICENSE). You may use, modify, distribute, and sell this software, including in commercial projects, provided you retain the copyright and license notices. Third-party notices are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
