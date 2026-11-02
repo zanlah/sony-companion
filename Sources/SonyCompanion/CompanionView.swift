@@ -166,7 +166,7 @@ struct CompanionView: View {
     }
 
     private func sectionLabel(_ title: String) -> some View {
-        Text(title).font(.system(size: 10, weight: .semibold, design: .rounded)).tracking(1.8).foregroundStyle(.secondary)
+        Text(title).font(.system(size: 10, weight: .semibold, design: .rounded)).foregroundStyle(.secondary)
     }
     private func openSettings(_ pane: String) {
         if let url = URL(string: "x-apple.systempreferences:\(pane)") { NSWorkspace.shared.open(url) }
@@ -194,7 +194,7 @@ private struct MicrophoneSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("CALL AUDIO").font(.system(size: 10, weight: .semibold, design: .rounded))
-                .tracking(1.8).foregroundStyle(.secondary)
+                .foregroundStyle(.secondary)
             Toggle("Use Mac microphone", isOn: Binding(get: { guardModel.enabled }, set: guardModel.setEnabled))
                 .toggleStyle(.switch).controlSize(.small)
             Text("Input: \(guardModel.inputName)").font(.caption).foregroundStyle(.secondary)
