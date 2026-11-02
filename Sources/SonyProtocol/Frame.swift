@@ -67,27 +67,32 @@ public struct FrameReader {
 public struct Session {
     private var reader = FrameReader()
     private var sequence: UInt8 = 0
-    private var pending: [[UInt8]] = []
-    private var inFlight: [UInt8]?
+    private struct Command {
+        var kind: UInt8
+        var payload: [UInt8]
+    }
+    private var pending: [Command] = []
+    private var inFlight: Command?
     private var sentAt: TimeInterval = 0
     private var retries = 0
     public private(set) var failed = false
     public init() {}
 
-    public mutating func enqueue(_ payload: [UInt8], now: TimeInterval) -> [[UInt8]] {
+    public mutating func enqueue(_ payload: [UInt8], kind: UInt8 = 0x0c, now: TimeInterval) -> [[UInt8]] {
         guard !failed else { return [] }
         // Slider changes replace an unsent command for the same setting.
-        if [0x68, 0x58].contains(payload.first) {
-            pending.removeAll { Array($0.prefix(2)) == Array(payload.prefix(2)) }
+        if kind == 0x0c, [0x68, 0x58].contains(payload.first) {
+            pending.removeAll { $0.kind == kind && Array($0.payload.prefix(2)) == Array(payload.prefix(2)) }
         }
-        pending.append(payload)
+        pending.append(Command(kind: kind, payload: payload))
         return next(now: now)
     }
 
-    public mutating func receive(_ bytes: [UInt8], now: TimeInterval) -> (writes: [[UInt8]], replies: [[UInt8]]) {
-        guard !failed else { return ([], []) }
+    public mutating func receive(_ bytes: [UInt8], now: TimeInterval) -> (writes: [[UInt8]], replies: [[UInt8]], table2Replies: [[UInt8]]) {
+        guard !failed else { return ([], [], []) }
         var writes: [[UInt8]] = []
         var replies: [[UInt8]] = []
+        var table2Replies: [[UInt8]] = []
         for frame in reader.receive(bytes) {
             if frame.kind == 1 {
                 if inFlight != nil, frame.sequence == (sequence ^ 1), frame.payload.isEmpty {
@@ -96,23 +101,24 @@ public struct Session {
             } else if frame.sequence <= 1 {
                 writes.append(Frame(kind: 1, sequence: frame.sequence ^ 1, payload: []).encoded)
                 if frame.kind == 0x0c { replies.append(frame.payload) }
+                if frame.kind == 0x0e { table2Replies.append(frame.payload) }
             }
         }
         writes += next(now: now)
-        return (writes, replies)
+        return (writes, replies, table2Replies)
     }
 
     public mutating func tick(now: TimeInterval) -> [[UInt8]] {
         guard let inFlight, now - sentAt >= 1 else { return [] }
         guard retries < 2 else { failed = true; pending = []; return [] }
         retries += 1; sentAt = now
-        return [Frame(sequence: sequence, payload: inFlight).encoded]
+        return [Frame(kind: inFlight.kind, sequence: sequence, payload: inFlight.payload).encoded]
     }
 
     private mutating func next(now: TimeInterval) -> [[UInt8]] {
         guard inFlight == nil, !pending.isEmpty, !failed else { return [] }
-        let payload = pending.removeFirst()
-        inFlight = payload; sentAt = now; retries = 0
-        return [Frame(sequence: sequence, payload: payload).encoded]
+        let command = pending.removeFirst()
+        inFlight = command; sentAt = now; retries = 0
+        return [Frame(kind: command.kind, sequence: sequence, payload: command.payload).encoded]
     }
 }

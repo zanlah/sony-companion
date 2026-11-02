@@ -10,6 +10,12 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
     @Published private(set) var deviceName = "WH-1000XM5"
     @Published private(set) var notice: String?
     @Published private(set) var demo = false
+    @Published private(set) var playbackDevices: [PlaybackDevice]?
+    @Published private(set) var sourceStatus = "Reading connected devices…"
+    @Published private(set) var switchingTo: String?
+    private var sourceLayout: DeviceListLayout?
+    private var lastSourceRefresh: TimeInterval = 0
+    private var switchDeadline: TimeInterval = 0
     private var channel: IOBluetoothRFCOMMChannel?
     private var session = Session()
     private var timer: Timer?
@@ -32,6 +38,9 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
             for reply: [UInt8] in [[1, 0, 3, 0, 0x20, 0x16, 0, 0], [0x23, 0, 82, 0],
                                   [0x67, 0x17, 1, 1, 0, 0, 12], [0x57, 0, 0, 6, 10, 10, 10, 10, 10, 10],
                                   [0xe7, 1, 0], [0xf7, 0x0c, 1], [0x13, 2, 2]] { state.apply(reply) }
+            sourceLayout = .classic
+            handleSourceReply([0x39, 0, 2] + Array("11:22:33:44:55:66".utf8) + [1, 7] + Array("MacBook".utf8)
+                              + Array("AA:BB:CC:DD:EE:FF".utf8) + [2, 6] + Array("iPhone".utf8) + [1])
             return
         }
         timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in self?.tick() }
@@ -53,6 +62,51 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
         guard connected, state.ready, !demo else { return }
         for query in HeadphoneState.queries { send(query) }
         lastRefresh = now
+    }
+
+    func refreshSources() {
+        guard let sourceLayout, connected, state.ready, !demo else { return }
+        send(sourceLayout.query, kind: 0x0e)
+        lastSourceRefresh = now
+    }
+
+    func playFrom(_ device: PlaybackDevice) {
+        guard switchingTo == nil, sourceLayout != nil,
+              playbackDevices?.contains(where: { $0.id == device.id && !$0.playing }) == true,
+              let command = PlaybackSources.switchCommand(address: device.id) else { return }
+        if demo {
+            playbackDevices = playbackDevices?.map { PlaybackDevice(id: $0.id, name: $0.name, playing: $0.id == device.id) }
+            return
+        }
+        guard connected, state.ready else { return }
+        switchingTo = device.id; switchDeadline = now + 6
+        sourceStatus = "Switching to \(device.name)…"
+        send(command, kind: 0x0e)
+        refreshSources()
+    }
+
+    private func handleSourceReply(_ payload: [UInt8]) {
+        guard let reply = PlaybackSources.parse(payload) else { return }
+        switch reply {
+        case .capabilities(let layout):
+            sourceLayout = layout
+            sourceStatus = layout == nil ? "Source switching is unavailable on these headphones." : "Reading connected devices…"
+            refreshSources()
+        case .devices(let devices):
+            playbackDevices = devices
+            if let target = switchingTo {
+                if devices.contains(where: { $0.id == target && $0.playing }) {
+                    switchingTo = nil; sourceStatus = "Audio source switched."
+                } else if !devices.contains(where: { $0.id == target }) {
+                    switchingTo = nil; sourceStatus = "The selected device disconnected."
+                }
+            } else {
+                sourceStatus = devices.count < 2 ? "Connect both devices to switch between them." : "Choose which device you hear."
+            }
+        case .switchAcknowledged:
+            // The acknowledgement does not guarantee success, e.g. during a call.
+            refreshSources()
+        }
     }
 
     func setNoise(mode: NoiseMode? = nil, level: Int? = nil, focus: Bool? = nil) {
@@ -101,6 +155,11 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
             if session.failed { fail("The headphones stopped responding. Retrying…"); return }
             if !state.ready, now >= deadline { fail("The headphones did not finish the handshake."); return }
             if state.ready, now - lastRefresh >= 60 { refresh() }
+            if state.ready, sourceLayout != nil, now - lastSourceRefresh >= (switchingTo == nil ? 5 : 1) { refreshSources() }
+            if switchingTo != nil, now >= switchDeadline {
+                switchingTo = nil
+                sourceStatus = "Switch not confirmed. Pause playback or end the call, then try again."
+            }
         }
     }
 
@@ -154,9 +213,12 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
         let output = session.receive(bytes, now: now)
         write(output.writes)
         for reply in output.replies { state.apply(reply) }
+        for reply in output.table2Replies { handleSourceReply(reply) }
         if state.unsupported { fail("This app supports the WH-1000XM5 v2 protocol."); return }
         if state.ready, !handshakeRequested {
             handshakeRequested = true; status = "Connected"; refresh()
+            if state.table2Supported { send(PlaybackSources.capabilityQuery, kind: 0x0e) }
+            else { sourceStatus = "Source switching is unavailable on these headphones." }
         }
     }
 
@@ -165,9 +227,9 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
         tearDown(); status = "Headphones disconnected"; nextAttempt = now + 2
     }
 
-    private func send(_ payload: [UInt8]) {
+    private func send(_ payload: [UInt8], kind: UInt8 = 0x0c) {
         guard connected, state.ready, !demo else { return }
-        write(session.enqueue(payload, now: now))
+        write(session.enqueue(payload, kind: kind, now: now))
     }
 
     private func write(_ frames: [[UInt8]]) {
@@ -185,5 +247,7 @@ final class HeadphoneController: NSObject, ObservableObject, IOBluetoothRFCOMMCh
     private func tearDown() {
         let old = channel; channel = nil; old?.close()
         connected = false; state = HeadphoneState(); session = Session(); queryPending = false
+        sourceLayout = nil; playbackDevices = nil; switchingTo = nil
+        sourceStatus = "Reading connected devices…"; lastSourceRefresh = 0
     }
 }

@@ -33,6 +33,7 @@ public enum EQPreset: UInt8, CaseIterable {
 public struct HeadphoneState {
     public var ready = false
     public var unsupported = false
+    public var table2Supported = false
     public var battery: Int?
     public var charging = false
     public var noise: NoiseState?
@@ -51,6 +52,7 @@ public struct HeadphoneState {
         case 0x01:
             ready = p.count == 8 && p[1] == 0
             unsupported = !ready
+            table2Supported = ready && p[7] == 0
         case 0x23, 0x25:
             if p.count >= 4, p[1] == 0, p[2] <= 100 { battery = Int(p[2]); charging = p[3] == 1 }
         case 0x67, 0x69:
